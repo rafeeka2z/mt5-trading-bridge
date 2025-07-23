@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - TradingView MT5 Bridge{% endblock %}
+
+{% block content %}
+<!-- MT5 Connection Status -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-1">MT5 Connection Status</h5>
+                        <div id="connection-status">
+                            <span class="badge badge-secondary">Checking...</span>
+                        </div>
+                    </div>
+                    <div id="account-info" class="text-end" style="display: none;">
+                        <small class="text-muted">Account: <span id="account-login">-</span></small><br>
+                        <small class="text-muted">Server: <span id="account-server">-</span></small><br>
+                        <small class="text-muted">Balance: $<span id="account-balance">-</span></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Statistics Cards -->
+    <div class="col-md-3 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title text-muted">Total Alerts</h6>
+                        <h3 class="mb-0">{{ stats.total_alerts }}</h3>
+                    </div>
+                    <div class="text-primary">
+                        <i data-feather="bell" size="24"></i>
+                    </div>
+                </div>
+                <small class="text-muted">{{ stats.today_alerts }} today</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title text-muted">Total Trades</h6>
+                        <h3 class="mb-0">{{ stats.total_trades }}</h3>
+                    </div>
+                    <div class="text-success">
+                        <i data-feather="trending-up" size="24"></i>
+                    </div>
+                </div>
+                <small class="text-muted">{{ stats.today_trades }} today</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title text-muted">Successful</h6>
+                        <h3 class="mb-0 text-success">{{ stats.successful_trades }}</h3>
+                    </div>
+                    <div class="text-success">
+                        <i data-feather="check-circle" size="24"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title text-muted">Failed</h6>
+                        <h3 class="mb-0 text-danger">{{ stats.failed_trades }}</h3>
+                    </div>
+                    <div class="text-danger">
+                        <i data-feather="x-circle" size="24"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Account Information -->
+    {% if account_info %}
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i data-feather="user"></i>
+                    Account Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <strong>Login:</strong> {{ account_info.login }}<br>
+                        <strong>Server:</strong> {{ account_info.server }}<br>
+                        <strong>Currency:</strong> {{ account_info.currency }}
+                    </div>
+                    <div class="col-6">
+                        <strong>Balance:</strong> {{ "%.2f"|format(account_info.balance) }}<br>
+                        <strong>Equity:</strong> {{ "%.2f"|format(account_info.equity) }}<br>
+                        <strong>Free Margin:</strong> {{ "%.2f"|format(account_info.free_margin) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Open Positions -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i data-feather="bar-chart-2"></i>
+                    Open Positions
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if positions %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Type</th>
+                                <th>Volume</th>
+                                <th>Profit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for position in positions %}
+                            <tr>
+                                <td>{{ position.symbol }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if position.type == 'BUY' else 'danger' }}">
+                                        {{ position.type }}
+                                    </span>
+                                </td>
+                                <td>{{ position.volume }}</td>
+                                <td class="text-{{ 'success' if position.profit >= 0 else 'danger' }}">
+                                    {{ "%.2f"|format(position.profit) }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No open positions</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Alerts -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i data-feather="bell"></i>
+                    Recent Alerts
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_alerts %}
+                <div class="list-group list-group-flush">
+                    {% for alert in recent_alerts %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ alert.symbol }}</strong>
+                            <span class="badge bg-{{ 'success' if alert.action == 'BUY' else 'danger' if alert.action == 'SELL' else 'warning' }}">
+                                {{ alert.action }}
+                            </span>
+                            {% if alert.price %}
+                            <small class="text-muted">@ {{ alert.price }}</small>
+                            {% endif %}
+                            <br>
+                            <small class="text-muted">{{ alert.received_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                        </div>
+                        <span class="badge bg-{{ 'success' if alert.status == 'PROCESSED' else 'danger' if alert.status == 'FAILED' else 'secondary' }}">
+                            {{ alert.status }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No recent alerts</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Trades -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i data-feather="trending-up"></i>
+                    Recent Trades
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_trades %}
+                <div class="list-group list-group-flush">
+                    {% for trade in recent_trades %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ trade.symbol }}</strong>
+                            <span class="badge bg-{{ 'success' if trade.action == 'BUY' else 'danger' if trade.action == 'SELL' else 'warning' }}">
+                                {{ trade.action }}
+                            </span>
+                            {% if trade.volume %}
+                            <small class="text-muted">{{ trade.volume }} lots</small>
+                            {% endif %}
+                            <br>
+                            <small class="text-muted">{{ trade.executed_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-{{ 'success' if trade.status == 'FILLED' else 'danger' if trade.status == 'FAILED' else 'warning' }}">
+                                {{ trade.status }}
+                            </span>
+                            {% if trade.profit %}
+                            <br>
+                            <small class="text-{{ 'success' if trade.profit >= 0 else 'danger' }}">
+                                {{ "%.2f"|format(trade.profit) }}
+                            </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No recent trades</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Chart -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i data-feather="activity"></i>
+                    Activity Chart (Last 24 Hours)
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="activityChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

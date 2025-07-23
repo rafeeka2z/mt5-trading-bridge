@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Logs - TradingView MT5 Bridge{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i data-feather="file-text"></i>
+        Trading Logs
+    </h2>
+    <div>
+        <a href="{{ url_for('logs') }}" class="btn btn-outline-secondary">
+            <i data-feather="refresh-cw"></i>
+            Refresh
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if alerts.items %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Symbol</th>
+                        <th>Action</th>
+                        <th>Price</th>
+                        <th>Volume</th>
+                        <th>Status</th>
+                        <th>Trade Status</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alert in alerts.items %}
+                    <tr>
+                        <td>
+                            <small>{{ alert.received_at.strftime('%Y-%m-%d') }}</small><br>
+                            <small class="text-muted">{{ alert.received_at.strftime('%H:%M:%S') }}</small>
+                        </td>
+                        <td><strong>{{ alert.symbol }}</strong></td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if alert.action == 'BUY' else 'danger' if alert.action == 'SELL' else 'warning' }}">
+                                {{ alert.action }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if alert.price %}
+                                {{ "%.5f"|format(alert.price) }}
+                            {% else %}
+                                <span class="text-muted">Market</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if alert.volume %}
+                                {{ alert.volume }}
+                            {% else %}
+                                <span class="text-muted">Default</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if alert.status == 'PROCESSED' else 'danger' if alert.status == 'FAILED' else 'secondary' }}">
+                                {{ alert.status }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if alert.trade_executions %}
+                                {% for trade in alert.trade_executions %}
+                                <span class="badge bg-{{ 'success' if trade.status == 'FILLED' else 'danger' if trade.status == 'FAILED' else 'warning' }}">
+                                    {{ trade.status }}
+                                </span>
+                                {% if trade.mt5_ticket %}
+                                    <br><small class="text-muted">#{{ trade.mt5_ticket }}</small>
+                                {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">No trade</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#details-{{ alert.id }}">
+                                <i data-feather="eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr class="collapse" id="details-{{ alert.id }}">
+                        <td colspan="8">
+                            <div class="bg-dark p-3 rounded">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Alert Details</h6>
+                                        {% if alert.stop_loss %}
+                                        <strong>Stop Loss:</strong> {{ alert.stop_loss }}<br>
+                                        {% endif %}
+                                        {% if alert.take_profit %}
+                                        <strong>Take Profit:</strong> {{ alert.take_profit }}<br>
+                                        {% endif %}
+                                        {% if alert.processed_at %}
+                                        <strong>Processed:</strong> {{ alert.processed_at.strftime('%Y-%m-%d %H:%M:%S') }}<br>
+                                        {% endif %}
+                                        {% if alert.error_message %}
+                                        <strong class="text-danger">Error:</strong> {{ alert.error_message }}
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {% if alert.trade_executions %}
+                                        <h6>Trade Execution</h6>
+                                        {% for trade in alert.trade_executions %}
+                                        <strong>Ticket:</strong> {{ trade.mt5_ticket or 'N/A' }}<br>
+                                        <strong>Volume:</strong> {{ trade.volume }}<br>
+                                        {% if trade.open_price %}
+                                        <strong>Open Price:</strong> {{ "%.5f"|format(trade.open_price) }}<br>
+                                        {% endif %}
+                                        {% if trade.profit %}
+                                        <strong>Profit:</strong> 
+                                        <span class="text-{{ 'success' if trade.profit >= 0 else 'danger' }}">
+                                            {{ "%.2f"|format(trade.profit) }}
+                                        </span><br>
+                                        {% endif %}
+                                        {% if trade.error_message %}
+                                        <strong class="text-danger">Trade Error:</strong> {{ trade.error_message }}
+                                        {% endif %}
+                                        {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                {% if alert.raw_data %}
+                                <div class="mt-3">
+                                    <h6>Raw Data</h6>
+                                    <pre class="text-muted"><code>{{ alert.raw_data }}</code></pre>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if alerts.pages > 1 %}
+        <nav aria-label="Log pagination">
+            <ul class="pagination justify-content-center">
+                {% if alerts.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('logs', page=alerts.prev_num) }}">Previous</a>
+                </li>
+                {% endif %}
+                
+                {% for page_num in alerts.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num != alerts.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('logs', page=page_num) }}">{{ page_num }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">…</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if alerts.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('logs', page=alerts.next_num) }}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i data-feather="inbox" size="48" class="text-muted mb-3"></i>
+            <h5 class="text-muted">No logs found</h5>
+            <p class="text-muted">Webhook alerts will appear here once received</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
